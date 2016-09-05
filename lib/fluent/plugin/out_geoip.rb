@@ -1,7 +1,10 @@
 require 'fluent/mixin/rewrite_tag_name'
+require 'fluent/plugin/output'
 
-class Fluent::GeoipOutput < Fluent::BufferedOutput
+class Fluent::Plugin::GeoipOutput < Fluent::Plugin::Output
   Fluent::Plugin.register_output('geoip', self)
+
+  helpers :compat_parameters
 
   config_param :geoip_database, :string, :default => File.dirname(__FILE__) + '/../../../data/GeoLiteCity.dat'
   config_param :geoip_lookup_key, :string, :default => 'host'
@@ -18,16 +21,6 @@ class Fluent::GeoipOutput < Fluent::BufferedOutput
   config_param :flush_interval, :time, :default => 0
   config_param :log_level, :string, :default => 'warn'
 
-  # Define `log` method for v0.10.42 or earlier
-  unless method_defined?(:log)
-    define_method("log") { $log }
-  end
-
-  # To support Fluentd v0.10.57 or earlier
-  unless method_defined?(:router)
-    define_method("router") { Fluent::Engine }
-  end
-
   def initialize
     require 'fluent/plugin/geoip'
 
@@ -35,6 +28,7 @@ class Fluent::GeoipOutput < Fluent::BufferedOutput
   end
 
   def configure(conf)
+    compat_parameters_convert(conf, :buffer)
     super
     Fluent::GeoIP.class_eval do
       include Fluent::Mixin::RewriteTagName
